@@ -1,0 +1,23 @@
+{
+	"token": "TOKEN",
+	"prefix": "!",
+	"version": "0.0.1",
+	"CSE": "CSE",
+	"API": "API",
+	"name": "Robo-boi",
+	"info": "I am Robo-boi. \nI was created by <@191229978174554112>.",
+
+	"OP": "All rank data is stored within a database, and is non-volatile.\nThe password data is stored inside the program and is volatile, should the bot shut down or restart the password resets to the default value.",
+	"usage1": "Use the rankup command along with the password provided during the meeting to rank up. Correct form is 'rankup password'",
+	"usage2": "All other commands are for administrator use, to set and get the passwords and to add and remove ranks.",
+
+	"wrongPasswordMessage": "Wrong password, check for upper/lower cases and try again.\n",
+	"guildId": "434527555177938944",
+	"guildName": "Bot Workshop",
+
+	"pass": "pass",
+	"masterRank": -1,
+
+	"ranks": [],
+	"rankNums": []
+}
