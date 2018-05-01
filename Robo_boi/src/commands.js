@@ -1,47 +1,150 @@
 const sql = require("sqlite");
 sql.open("./DB.sqlite");
 
-function CP(message, args, client) {//1 = ok, -1 = fail
-	let guild = client.guilds.get(config.guildId);
-	let ret = guild.fetchMember(message.author).then(member => {
-		for (let i = 0; i < config.ranks.length; i++) {
-			//console.log(i);
-			if(config.rankNums[i] == -1 && member.roles.some(r=>[config.ranks[i]].includes(r.name))){
-				console.log("Administrator restricted function accessed by " + message.author.username);
-				let term = "";
-				for (let i = 0; i < args.length; i++) {
-					term += args[i];
-					if (i != args.length - 1) {
-						term += " ";
+function util() {
+
+}
+
+
+util.funcs = {
+	CP: async function(message, args, client) {//1 = ok, -1 = fail
+		let guild = client.guilds.get(config.guildId);
+		let ret = guild.fetchMember(message.author).then(member => {
+			for (let i = 0; i < config.ranks.length; i++) {
+				if(config.rankNums[i] == -1 && member.roles.some(r=>[config.ranks[i]].includes(r.name))){
+					console.log("Administrator restricted function accessed by " + message.author.username);
+					let term = "";
+					for (let i = 0; i < args.length; i++) {
+						term += args[i];
+						if (i != args.length - 1) {
+							term += " ";
+						}
 					}
+					console.log("Function call: " + term);
+					return 1;
 				}
-				console.log("Function call: " + term);
-				return 1;
+			}
+			return -1;
+		});
+		return ret;
+	},
+
+	DMContextRequired: async function(message) {
+		let status = false;
+		if(message.guild === null){
+			status = true;
+		}
+		if(status == false){
+			await message.channel.send("Command from " + message.author + " removed, reason: ");
+			await message.channel.send("The command you attempted to use is for DMs only.");
+			message.delete();
+		}
+		return status;
+	},
+
+	fetchRanks: async function() {
+		var i = 0;
+		await sql.each("SELECT * FROM ranks", function (err, rankRow) {
+			//console.log(rankRow.rankId);
+			config.ranks[i] = rankRow.rankId;
+			config.rankNums[i] = rankRow.rankNum;
+			i++;
+		});
+		return config;
+	},
+
+	fetchUsers: async function() {
+		console.log("Fetching users.");
+		var i = 0;
+		await sql.each("SELECT * FROM users", function (err, userRow) {
+			config.users[i] = userRow.userId;
+			config.userRankups[i] = userRow.rankups;
+			config.userLastPass[i] = userRow.lastPass;
+			i++;
+		});
+		return config;
+	},
+
+	findUser: function(userId){
+		for(let i = 0; i < config.users.length; i++){
+			if(config.users[i] == userId){
+				return i;
 			}
 		}
 		return -1;
-	});
-	return ret;
-}
+	},
+
+	updateUser: async function(ID, rankups, lastPass){
+		//userId = fundUser(ID);
+		if(rankups != null){
+			await sql.run(`UPDATE users SET rankups = "${rankups}" WHERE userId = "${ID}"`);
+		}
+		if(lastPass != null){
+			await sql.run(`UPDATE users SET lastPass = "${lastPass}" WHERE userId = "${ID}"`);
+		}
+		this.fetchUsers();
+	},
+
+	addUser: async function(ID, rankups, pass){
+		let i = config.users.length;
+		config.users[i] = ID;
+		config.userRankups[i] = rankups;
+		config.userLastPass[i] = pass;
+	}
+
+};
 
 const config = require("./config.json");
 const F = require("./functions.js");
 
-function base() {
+function com() {
+
 }
 
-base.commands = {
+com.commands = {
+	test: async function(message, args, client) {
+		//util.funcs.updateUser(message.author.id, null, null);
+		/*let DM = await util.funcs.DMContextRequired(message);
+		if(DM == true){
+			util.funcs.addUser("TEST",0,"TEST");
+			message.channel.send("Operation completed.");
+		}*/
+		let guild = client.guilds.get(config.guildId);
+		//guild.roles.find("id", "440862282281648128");
+		//let role = guild.roles.find("id", "440862282281648128");
+		//let role = guild.roles.find("name", "Rank one");
+		let role = message.member.roles.has("440862282281648128");
+		console.log(role);
+	},
+
+	fetchRanks: async function(message){
+		util.funcs.fetchRanks();
+		message.channel.send("Ranks fetched.");
+	},
+
 	info: function (message) {
 		message.channel.send(config.info);
 	},
-
+	
 	usage: async function (message) {
 		message.channel.send(config.usage1);
 		//message.channel.send(config.usage2);
 	},
 
+	printRanks: async function(message, args, client) {
+		for(let i = 0; i < config.ranks.length; i++){
+			message.channel.send("ID: " + config.ranks[i] + ", value: " + config.rankNums[i] + ".\n");
+		}
+	},
+
+	printUsers: async function(message, args, client) {
+		for(let i = 0; i < config.users.length; i++){
+			message.channel.send("ID: " + config.users[i] + ", rankups: " + config.userRankups[i] + ", lastPass: " + config.userLastPass[i] + ".\n");
+		}
+	},
+
 	setPass: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+		let ret = await util.funcs.CP(message, args, client);
 		
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
@@ -58,16 +161,16 @@ base.commands = {
 	},
 
 	getPass: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+		let ret = await util.funcs.CP(message, args, client);
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
 			return;
 		}
-			message.channel.send("Current password: " + config.pass);
+		message.channel.send("Current password: " + config.pass);
 	},
 
 	operationInfo: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+		let ret = await util.funcs.CP(message, args, client);
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
 			return;
@@ -76,7 +179,7 @@ base.commands = {
 	},
 
 	help: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+		let ret = await util.funcs.CP(message, args, client);
 		
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
@@ -87,12 +190,13 @@ base.commands = {
 	},
 
 	addRank: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+		let ret = await util.funcs.CP(message, args, client);
 		
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
 			return;
 		}
+
 		let rank_name = "";
 		for (let i = 1; i < args.length - 1; i++) {
 			rank_name += args[i];
@@ -114,15 +218,18 @@ base.commands = {
 			message.channel.send("Database error during addRank()!");
 			console.log("Database error during addRank()");
 		});
+
+
 	},
 
-	removeRank: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+	/*removeRank: async function (message, args, client) {
+		let ret = await util.funcs.CP(message, args, client);
 		
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
 			return;
 		}
+
 		let rank_name = "";
 		for (let i = 1; i < args.length; i++) {
 			rank_name += args[i];
@@ -136,15 +243,16 @@ base.commands = {
 			message.channel.send("Database error during removeRank()!");
 			console.log("Database error during removeRank()!");
 		});
-	},
+	},*/
 
 	checkRank: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+		let ret = await util.funcs.CP(message, args, client);
 		
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
 			return;
 		}
+
 		let rank_name = "";
 		for (let i = 1; i < args.length; i++) {
 			rank_name += args[i];
@@ -166,22 +274,23 @@ base.commands = {
 		});
 	},
 	
-	register: function (message, args, client) {
+	register: async function (message, args, client) {
 		let guild = client.guilds.get(config.guildId);
 
 		let f = 0;
-		guild.fetchMember(message.author).then(member => {
+		await guild.fetchMember(message.author).then(member => {
 			for (let i = 0; i < config.ranks.length; i++) {
-				if (member.roles.some(r=>[config.ranks[i]].includes(r.name))) {
+				if (member.roles.some(r=>[config.ranks[i]].includes(r.name)) && config.rankNums[i] >= 0) {
 					f = 1;
 				}
 			}
-			if (f == 0) {
-				message.channel.send("Error: You currently have no rank.");
-				console.log("Error: user \"" + message.author.username + "\" is missing a rank.");
-				return;
-			}
 		});
+
+		if (f == 0) {
+			message.channel.send("Error: You currently have no rank.");
+			console.log("Error: user \"" + message.author.username + "\" is missing a rank.");
+			return -1;
+		}
 
 		sql.get(`SELECT * FROM users WHERE userId = "${message.author.id}"`).then(row => {
 			if (!row) {
@@ -189,7 +298,8 @@ base.commands = {
 					for (let i = 0; i < config.ranks.length; i++) {
 						if (member.roles.some(r=>[config.ranks[i]].includes(r.name))) {
 							console.log("New database entry: user \"" + message.author.username + "\" with rank \"" + config.ranks[i] + "\".\n");
-							sql.run("INSERT INTO users (userId, rankups, lastPass) VALUES (?, ?, ?)", [message.author.id, config.rankNums[i], "password"]);
+							sql.run("INSERT INTO users (userId, rankups, lastPass) VALUES (?, ?, ?)", [message.author.id, config.rankNums[i], config.defaultPass]);
+							util.funcs.addUser(message.author.id, config.rankNums[i], config.defaultPass);
 							message.channel.send("Registration complete, you can now use " + config.prefix + "rankup.");
 							return;
 						}
@@ -202,7 +312,75 @@ base.commands = {
 		});
 	},
 
-	rankup: function (message, args, client) {
+	rankup: async function(message, args, client) {
+
+		let DM = await util.funcs.DMContextRequired(message);
+		if(DM != true){
+			return -1;
+		}
+
+		let guild = client.guilds.get(config.guildId);
+
+		let pass = F.functions.extractString(message, args);
+
+		if (pass == config.pass) {
+			let userId = util.funcs.findUser(message.author.id);
+
+			if(userId < 0){
+				message.channel.send("You need to use " + config.prefix + "register before you can use this function.");
+				return -1;
+			}
+
+			if (config.userLastPass[userId] == pass) {
+				message.channel.send("This password has already been used.");
+				return -1;
+			}
+			let rankups = config.userRankups[userId] + 1;
+			util.funcs.updateUser(message.author.id, rankups, null);
+
+			guild.fetchMember(message.author).then(member => {
+				let rank = "";
+				for (let ci = 0; ci < config.ranks.length; ci++) {
+					for (let ri = 0; ri < config.userRankups[userId] + 1; ri++) {
+						if (config.rankNums[ci] == ri) {
+							rank = config.ranks[ci];
+							//console.log(ci + " " + ri + " " + rank);
+						}
+					}
+				}
+				for (let i = 0; i < config.ranks.length; i++) {
+					let role = guild.roles.find("name", config.ranks[i]);
+					if (role != guild.roles.find("name", rank) && config.rankNums[i] >= 0) {
+						member.removeRole(role).catch(console.error);
+					}
+				}
+				let role = guild.roles.find("name", rank);
+				member.addRole(role).catch(console.error);
+
+				//sql.run(`UPDATE users SET lastPass = "${pass}" WHERE userId = "${message.author.id}"`);
+				util.funcs.updateUser(message.author.id, null, pass);
+
+				//console.log("Selected rank: " + rank);
+				//console.log("Operation complete.");
+				message.channel.send("Rankup operation successful.\nYour rank: \"" + rank + "\".\nRankups: " + (config.userRankups[userId] + 1));
+				//console.log("Starting fetch");
+				util.funcs.fetchUsers();
+				//console.log("Fetch complete");
+			});
+			//message.channel.send("\"It just works\".\n	-Todd Howard");
+
+		} else {
+			message.channel.send(config.wrongPasswordMessage);
+		}
+		return 1;
+	},
+
+	/*rankup_OLD: async function (message, args, client) {
+
+		let DM = await util.funcs.DMContextRequired(message);
+		if(DM != true){
+			return -1;
+		}
 
 		let guild = client.guilds.get(config.guildId);
 
@@ -232,7 +410,7 @@ base.commands = {
 					}
 					for (let i = 0; i < config.ranks.length; i++) {
 						let role = guild.roles.find("name", config.ranks[i]);
-						if (role != guild.roles.find("name", rank) && config.rankNums[i] <= 0) {
+						if (role != guild.roles.find("name", rank) && config.rankNums[i] >= 0) {
 							member.removeRole(role).catch(console.error);
 						}
 					}
@@ -249,23 +427,10 @@ base.commands = {
 		} else {
 			message.channel.send(config.wrongPasswordMessage);
 		}
-	},
+	},*/
 
-	fetchRanks: async function (message, args, client) {
-		if(message == null){
-			var i = 0;
-			sql.each("SELECT * FROM ranks", function (err, rankRow) {
-				//console.log(rankRow.rankId);
-				config.ranks[i] = rankRow.rankId;
-				config.rankNums[i] = rankRow.rankNum;
-				i++;
-			});
-			return config;
-		}
-	},
-
-	resetRank: async function (message, args, client) {
-		let ret = await CP(message, args, client);
+	/*resetRank: async function (message, args, client) {
+		let ret = await util.funcs.CP(message, args, client);
 		if(ret != 1){
 			message.channel.send("You do not have access to this function.");
 			return;
@@ -283,7 +448,10 @@ base.commands = {
 			message.channel.send("Database error during resetRank()!");
 			console.log("Database error during resetRank()!");
 		});
-	}
+	}*/
 };
 
-module.exports = base;
+	module.exports = {
+		com,
+		util
+	};

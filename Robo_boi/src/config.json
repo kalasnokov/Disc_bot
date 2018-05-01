@@ -1,9 +1,4 @@
 {
-	"token": "TOKEN",
-	"prefix": "!",
-	"version": "0.0.1",
-	"CSE": "CSE",
-	"API": "API",
 	"name": "Robo-boi",
 	"info": "I am Robo-boi. \nI was created by <@191229978174554112>.",
 
@@ -19,5 +14,13 @@
 	"masterRank": -1,
 
 	"ranks": [],
-	"rankNums": []
+	"rankNums": [],
+
+	"users": [],
+	"userRankups": [],
+	"userLastPass": [ ],
+
+	"verbose": false,
+
+	"defaultPass": "Mankalling"
 }
