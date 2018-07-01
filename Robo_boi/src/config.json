@@ -1,4 +1,9 @@
 {
+	"token": "NDM0NDYzMDI1OTQ1MTE2Njg3.DbKxjg.1dAAMNJMGp2r9QyNZmSmRLsFsHY",
+	"prefix": "!",
+	"version": "0.0.1",
+	"CSE": "017304980592544749354:at6yo4ajmrg",
+	"API": "AIzaSyDE7CmS3lWpmx45FSxfffAZq8JH5545sTU",
 	"name": "Robo-boi",
 	"info": "I am Robo-boi. \nI was created by <@191229978174554112>.",
 
@@ -14,13 +19,5 @@
 	"masterRank": -1,
 
 	"ranks": [],
-	"rankNums": [],
-
-	"users": [],
-	"userRankups": [],
-	"userLastPass": [ ],
-
-	"verbose": false,
-
-	"defaultPass": "Mankalling"
+	"rankNums": []
 }
